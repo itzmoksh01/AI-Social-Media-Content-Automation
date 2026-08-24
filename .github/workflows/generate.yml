@@ -1,0 +1,150 @@
+name: Generate cartoon short and request approval
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"   # every 20 minutes — polls the Sheets dashboard for a pending row
+  workflow_dispatch:
+    inputs:
+      force_generation:
+        description: "Bypass the 11:00 IST time gate and one-per-day limit (testing only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ffmpeg and fonts
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Install Higgsfield CLI
+        run: npm install -g @higgsfield/cli
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Restore Higgsfield credentials
+        run: |
+          mkdir -p ~/.config/higgsfield
+          echo '${{ secrets.HIGGSFIELD_CREDENTIALS }}' > ~/.config/higgsfield/credentials.json
+          echo '{"workspace_id": "aad56f9d-59a6-48c6-bbb0-1dd794d302ff"}' > ~/.config/higgsfield/config.json
+
+      - name: Verify Higgsfield auth
+        run: higgsfield account status
+
+      - name: Claim a pending row from the Sheets dashboard
+        id: claim
+        env:
+          GAS_WEBAPP_URL: ${{ secrets.GAS_WEBAPP_URL }}
+          GAS_SHARED_SECRET: ${{ secrets.GAS_SHARED_SECRET }}
+          FORCE_GENERATION: ${{ github.event.inputs.force_generation }}
+        run: cd scripts && python sheets_sync.py claim
+
+      - name: Run generation (Claude Code)
+        if: steps.claim.outputs.has_row == 'true'
+        env:
+          RUN_FOLDER: ${{ steps.claim.outputs.run_folder }}
+          SHEET_ROW: ${{ steps.claim.outputs.row_number }}
+          IDEA: ${{ steps.claim.outputs.idea }}
+          ASPECT_RATIO: ${{ steps.claim.outputs.aspect_ratio }}
+          VIDEO_LENGTH: ${{ steps.claim.outputs.video_length }}
+          GENERATION_MODE: test
+          GAS_WEBAPP_URL: ${{ secrets.GAS_WEBAPP_URL }}
+          GAS_SHARED_SECRET: ${{ secrets.GAS_SHARED_SECRET }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          claude -p "Run this generation following CLAUDE.md instructions exactly, including its 'Sheets-driven mode' section since RUN_FOLDER and SHEET_ROW are set. Use scripts/sheets_sync.py progress calls to report progress. Stay within every guardrail and cap listed there." \
+            --dangerously-skip-permissions
+
+      - name: Commit characters.json if Claude updated it (e.g. new Soul trained)
+        if: steps.claim.outputs.has_row == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- config/characters.json; then
+            git add config/characters.json
+            git commit -m "Update characters.json from sheet-driven run (row ${{ steps.claim.outputs.row_number }})"
+            git push
+          else
+            echo "No changes to characters.json"
+          fi
+
+      - name: Publish video as a public GitHub Release asset (media repo)
+        if: steps.claim.outputs.has_row == 'true'
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: projects123929/media
+          token: ${{ secrets.MEDIA_REPO_PAT }}
+          tag_name: sheet-run-${{ steps.claim.outputs.run_folder }}-${{ github.run_number }}
+          name: "Cartoon short - Row ${{ steps.claim.outputs.row_number }} (${{ steps.claim.outputs.today }})"
+          files: storage/pending/${{ steps.claim.outputs.run_folder }}/final.mp4
+          body: "Automated Sheets-driven generation run. Awaiting approval via email."
+
+      - name: Mark row Completed and send approval email
+        if: steps.claim.outputs.has_row == 'true' && success()
+        env:
+          GAS_WEBAPP_URL: ${{ secrets.GAS_WEBAPP_URL }}
+          GAS_SHARED_SECRET: ${{ secrets.GAS_SHARED_SECRET }}
+          # Passed as env vars, not interpolated directly into the shell
+          # command below - this text can contain quotes/special characters
+          # that would otherwise break bash's parsing when GitHub Actions
+          # substitutes ${{ }} as raw text into a run: block. Use the short
+          # "title" here (not the full "idea"), since this becomes the
+          # email subject line, which has a length limit.
+          ROW_TITLE: ${{ steps.claim.outputs.title }}
+        run: |
+          cd scripts
+          python sheets_sync.py complete \
+            --row "${{ steps.claim.outputs.row_number }}" \
+            --title "$ROW_TITLE" \
+            --video-url "https://github.com/projects123929/media/releases/download/sheet-run-${{ steps.claim.outputs.run_folder }}-${{ github.run_number }}/final.mp4"
+
+      - name: Mark row failed if generation errored
+        if: steps.claim.outputs.has_row == 'true' && failure()
+        env:
+          GAS_WEBAPP_URL: ${{ secrets.GAS_WEBAPP_URL }}
+          GAS_SHARED_SECRET: ${{ secrets.GAS_SHARED_SECRET }}
+          ROW_TITLE: ${{ steps.claim.outputs.title }}
+          RUN_FOLDER: ${{ steps.claim.outputs.run_folder }}
+        run: |
+          cd scripts
+          REASON_FILE="../storage/pending/${RUN_FOLDER}/failure_reason.txt"
+          if [ -f "$REASON_FILE" ]; then
+            REASON="$(cat "$REASON_FILE")"
+          else
+            REASON="Generation step failed before it could report a specific reason - check this run's GitHub Actions log for details."
+          fi
+          python sheets_sync.py fail \
+            --row "${{ steps.claim.outputs.row_number }}" \
+            --title "$ROW_TITLE" \
+            --reason "$REASON"
+
+      - name: Check Gmail for Approve/Reject replies, publish newly-approved rows
+        if: always()
+        env:
+          GAS_WEBAPP_URL: ${{ secrets.GAS_WEBAPP_URL }}
+          GAS_SHARED_SECRET: ${{ secrets.GAS_SHARED_SECRET }}
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: cd scripts && python sheets_sync.py check-approvals

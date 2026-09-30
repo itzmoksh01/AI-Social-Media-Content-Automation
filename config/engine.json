@@ -1,0 +1,37 @@
+{
+  "approval_required": true,
+  "brain": "muse",
+  "brain_note": "Per the project owner's decision (2026-09-30): Muse (this assistant) is the orchestration brain for runs in this workspace, following CLAUDE.md's creative instructions directly. The owner has no Claude Pro subscription, so the Claude Code CLI / CLAUDE_CODE_OAUTH_TOKEN route is NOT used. The owner's free Claude account and ChatGPT Go subscription are not connected - neither offers the headless token/API access this pipeline would need, and neither is required once Muse is the brain.",
+  "excel_file": "dashboard.xlsx",
+  "hf_limits": {
+    "delivery_size": "1080x1920 after local upscale",
+    "generation_size": "576x1024 (9:16) / 1024x576 (16:9)",
+    "max_scene_seconds": 8,
+    "quota": "Free ZeroGPU daily quota of the HF account whose HF_TOKEN is in config/.env (anonymous calls get a smaller quota)"
+  },
+  "hf_spaces": {
+    "image": "black-forest-labs/FLUX.1-schnell",
+    "video": "Lightricks/ltx-video-distilled"
+  },
+  "image_engine": "huggingface_flux",
+  "input_source": "excel",
+  "legacy_engines_kept_as_fallback": {
+    "input": "scripts/sheets_sync.py (Google Sheets + Apps Script bridge)",
+    "video": "scripts/higgsfield_scene.py (paid, needs Higgsfield auth)"
+  },
+  "publish_platforms": [
+    "instagram",
+    "facebook",
+    "youtube"
+  ],
+  "upscale": "local_ffmpeg",
+  "video_engine": "huggingface",
+  "chatgpt_connected": false,
+  "chatgpt_note": "Owner decision 2026-09-30 (revised plan, option C): ChatGPT is SKIPPED. Muse is the orchestration brain. No ChatGPT/OpenAI connection is used in this demo.",
+  "captions": false,
+  "captions_note": "Owner decision 2026-09-30: captions OFF for the demo run.",
+  "accepted_free_tier_spec": "Owner accepted 2026-09-30: LTX free output ~24s (3 scenes x ~8s), generated 576x1024, delivered 1080x1920 after local ffmpeg upscale.",
+  "demo_content": "Owner will write NEW demo content in dashboard.xlsx himself; run starts from a Pending row (row reset to Pending/0% on 2026-09-30).",
+  "social_accounts_status": "Not created yet as of 2026-09-30. Setup steps in docs/ACCOUNT_SETUP_STEPS.md. Publishing stays blocked until new email, accounts and tokens are provided.",
+  "hf_token_status": "Connected and verified 2026-09-30 via secure connector (custom.huggingface); whoami OK for the owner's HF account. Token value is NOT stored in this repo or config/.env."
+}

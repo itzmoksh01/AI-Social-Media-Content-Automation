@@ -4,6 +4,7 @@ Triggered only after an Approve action (locally: approval_server.py;
 in CI: .github/workflows/publish.yml on the 'approved' issue label).
 
 Both Instagram (Graph API) and YouTube (Data API v3) are wired up.
+Facebook Page publishing (Graph API /videos) was added 2026-09-30.
 """
 import argparse
 import io
@@ -115,6 +116,51 @@ def publish_to_instagram(video_url, caption):
     }
 
 
+def publish_to_facebook(video_url, caption):
+    """Publishes the video to a Facebook Page via the Graph API.
+
+    Posting through the API only works to a Page (not a personal profile),
+    using a Page access token with the pages_manage_posts permission.
+    Like Instagram, the video must be at a publicly fetchable URL.
+    """
+    access_token = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN")
+    page_id = os.environ.get("FACEBOOK_PAGE_ID")
+    if not (access_token and page_id):
+        return {
+            "platform": "facebook",
+            "success": False,
+            "error": "FACEBOOK_PAGE_ACCESS_TOKEN / FACEBOOK_PAGE_ID not set",
+        }
+
+    create_resp = requests.post(
+        f"{GRAPH_API_BASE}/{page_id}/videos",
+        data={
+            "file_url": video_url,
+            "description": caption,
+            "access_token": access_token,
+        },
+        timeout=120,
+    )
+    create_data = create_resp.json()
+    video_id = create_data.get("id")
+    if not video_id:
+        return {"platform": "facebook", "success": False, "error": create_data}
+
+    detail_resp = requests.get(
+        f"{GRAPH_API_BASE}/{video_id}",
+        params={"fields": "permalink_url", "access_token": access_token},
+        timeout=30,
+    )
+    permalink = detail_resp.json().get("permalink_url")
+    if permalink and not permalink.startswith("http"):
+        permalink = f"https://www.facebook.com{permalink}"
+
+    return {
+        "platform": "facebook", "success": True,
+        "media_id": video_id, "permalink": permalink,
+    }
+
+
 def publish_to_youtube(video_url, title, description):
     token_json = os.environ.get("YOUTUBE_TOKEN")
     if not token_json:
@@ -181,11 +227,13 @@ def main():
 
     if args.video_url:
         results.append(publish_to_instagram(args.video_url, args.caption))
+        results.append(publish_to_facebook(args.video_url, args.caption))
         results.append(publish_to_youtube(args.video_url, args.caption, args.caption))
     else:
         results.append({
-            "platform": "instagram", "success": False,
-            "error": "No --video-url provided (Instagram/YouTube need a public URL, not a local path)",
+            "platform": "instagram",
+            "success": False,
+            "error": "No --video-url provided (Instagram/Facebook/YouTube need a public URL, not a local path)",
         })
 
     lines = [f"Publish results for {args.date}:"]

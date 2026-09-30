@@ -3,7 +3,13 @@ config/youtube_client_secret.json
 config/youtube_token.json
 storage/
 *.mp4
+.venv/
 __pycache__/
 *.pyc
 ~$*.docx
 ~$*.doc
+
+# Local backups & OS noise
+dashboard_backup*.xlsx
+.DS_Store
+*.log

@@ -48,7 +48,8 @@ def probe(path):
 
 
 def generate_scene(prompt, out_path, duration=8, aspect_ratio="9:16",
-                   start_image=None, seed=42, space=DEFAULT_SPACE):
+                   start_image=None, seed=42, space=DEFAULT_SPACE,
+                   negative=DEFAULT_NEGATIVE):
     width, height = SIZES.get(aspect_ratio, SIZES["9:16"])
     duration = max(0.3, min(float(duration), MAX_DURATION))
 
@@ -58,7 +59,7 @@ def generate_scene(prompt, out_path, duration=8, aspect_ratio="9:16",
         print(f"[hf_scene] I2V via {space} ({width}x{height}, {duration}s): {prompt[:70]}...")
         result = predict_with_retry(
             space, "/image_to_video",
-            prompt, DEFAULT_NEGATIVE, handle_file(start_image), None,
+            prompt, negative, handle_file(start_image), None,
             height, width, "image-to-video", duration, 9,
             seed, False, 1, True,
         )
@@ -66,7 +67,7 @@ def generate_scene(prompt, out_path, duration=8, aspect_ratio="9:16",
         print(f"[hf_scene] T2V via {space} ({width}x{height}, {duration}s): {prompt[:70]}...")
         result = predict_with_retry(
             space, "/text_to_video",
-            prompt, DEFAULT_NEGATIVE, None, None,
+            prompt, negative, None, None,
             height, width, "text-to-video", duration, 9,
             seed, False, 1, True,
         )
@@ -89,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument("--start-image", default=None)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--space", default=DEFAULT_SPACE)
+    parser.add_argument("--negative", default=DEFAULT_NEGATIVE,
+                        help="Negative prompt; defaults to DEFAULT_NEGATIVE.")
     args = parser.parse_args()
     generate_scene(args.prompt, args.out, args.duration, args.aspect_ratio,
-                   args.start_image, args.seed, args.space)
+                   args.start_image, args.seed, args.space, args.negative)

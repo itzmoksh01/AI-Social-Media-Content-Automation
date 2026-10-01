@@ -11,9 +11,14 @@
  *  6. Any failure (generation or upload): Status=Failed + email alert
  *
  * Install: paste this file into Extensions > Apps Script in the dashboard
- * spreadsheet, set the SHARED_SECRET Script Property (Project Settings >
+ * spreadsheet, then add a second file: click "+" next to Files > choose
+ * "HTML" > name it exactly "Dashboard" > paste Dashboard.html there.
+ * Set the SHARED_SECRET Script Property (Project Settings >
  * Script Properties — NOT hardcoded here, this file is version controlled),
  * then Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
+ *
+ * Public LIVE dashboard (no login needed): <your-exec-url>?view=dashboard
+ * Live JSON feed used by the dashboard: <your-exec-url>?action=publicRows
  *
  * After (re)deploying, run the "setup_sheet" action once via the bridge —
  * it writes headers, adds dropdowns + input limits, and applies the premium
@@ -44,14 +49,27 @@ var COLUMNS = [
 ];
 
 function doGet(e) {
+  var params = (e && e.parameter) || {};
+  // Public LIVE dashboard — no secret needed (read-only UI).
+  // Anyone with the link can watch the automation: <exec-url>?view=dashboard
+  if (params.view === "dashboard") {
+    return HtmlService.createHtmlOutputFromFile("Dashboard")
+        .setTitle("Social Content Automation — LIVE")
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  // Public read-only rows feed for the dashboard — no secret needed.
+  // (Titles/descriptions are intentionally public on this endpoint.)
+  if (params.action === "publicRows") {
+    return _json({ ok: true, rows: _getRows(), generatedAt: new Date().toISOString() });
+  }
   var body = {
-    action: e.parameter.action,
-    secret: e.parameter.secret,
-    row: e.parameter.row ? Number(e.parameter.row) : undefined
+    action: params.action,
+    secret: params.secret,
+    row: params.row ? Number(params.row) : undefined
   };
-  if (e.parameter.values) {
+  if (params.values) {
     try {
-      body.values = JSON.parse(e.parameter.values);
+      body.values = JSON.parse(params.values);
     } catch (err) {
       return _json({ error: "Invalid JSON in values param" }, 400);
     }

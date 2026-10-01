@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Content Automation — LIVE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07070f; --panel:rgba(255,255,255,.045); --panel2:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.09); --txt:#f4f4f8; --mut:#a7a9c0;
+  --indigo:#6366f1; --violet:#8b5cf6; --fuchsia:#d946ef;
+  --green:#34d399; --blue:#60a5fa; --red:#f87171; --amber:#fbbf24; --grey:#9ca3af;
+  --r:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif;
+  min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.grotesk{font-family:"Space Grotesk",Inter,sans-serif}
+::selection{background:rgba(139,92,246,.4)}
+
+/* ambient background */
+.orb{position:fixed;border-radius:50%;filter:blur(110px);opacity:.35;z-index:0;pointer-events:none}
+.orb1{width:520px;height:520px;background:radial-gradient(circle,#4f46e5,transparent 70%);top:-160px;left:-120px;animation:drift 16s ease-in-out infinite alternate}
+.orb2{width:460px;height:460px;background:radial-gradient(circle,#a21caf,transparent 70%);bottom:-140px;right:-100px;animation:drift 20s ease-in-out infinite alternate-reverse}
+@keyframes drift{to{transform:translate(60px,40px) scale(1.12)}}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:rgba(7,7,15,.72);border-bottom:1px solid var(--border)}
+.nav-in{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;
+  background:linear-gradient(135deg,var(--indigo),var(--fuchsia));box-shadow:0 6px 22px rgba(139,92,246,.45)}
+.brand{font-weight:700;font-size:17px;letter-spacing:.2px}
+.brand small{display:block;font-weight:500;color:var(--mut);font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+.live{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:1.2px;
+  color:#fff;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.4);
+  padding:6px 12px;border-radius:999px;margin-left:6px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)}70%{box-shadow:0 0 0 9px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.spacer{flex:1}
+.clock{font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums}
+.share{cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--txt);
+  font:600 13px Inter;padding:9px 16px;border-radius:999px;transition:.2s}
+.share:hover{background:var(--panel2);transform:translateY(-1px)}
+
+/* hero */
+.hero{text-align:center;padding:64px 0 30px}
+.kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--violet);background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);
+  padding:7px 16px;border-radius:999px;margin-bottom:20px}
+.hero h1{font-size:clamp(34px,6vw,62px);line-height:1.08;font-weight:700;letter-spacing:-1px}
+.grad{background:linear-gradient(92deg,#a5b4fc,#e879f9 55%,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mut);font-size:clamp(14px,2.4vw,18px);max-width:640px;margin:16px auto 0;line-height:1.65}
+.counters{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:36px 0 8px}
+.counter{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:20px 10px;
+  backdrop-filter:blur(8px);transition:.25s}
+.counter:hover{transform:translateY(-3px);border-color:rgba(139,92,246,.45)}
+.counter b{font-family:"Space Grotesk";font-size:clamp(26px,4vw,40px);display:block;
+  background:linear-gradient(180deg,#fff,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent}
+.counter span{font-size:12px;color:var(--mut);letter-spacing:.6px;text-transform:uppercase;font-weight:600}
+
+/* section titles */
+.sec{margin:46px 0 18px;display:flex;align-items:baseline;gap:12px}
+.sec h2{font-size:clamp(20px,3.4vw,28px);letter-spacing:-.4px}
+.sec p{color:var(--mut);font-size:13.5px}
+
+/* journey */
+.journey{background:var(--panel);border:1px solid var(--border);border-radius:26px;padding:30px 26px;
+  backdrop-filter:blur(10px);position:relative;overflow:hidden}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;position:relative;margin-bottom:8px}
+.stage{text-align:center;position:relative;padding:0 4px}
+.s-icon{width:58px;height:58px;margin:0 auto 10px;border-radius:18px;display:grid;place-items:center;font-size:26px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);transition:.3s;position:relative;z-index:1}
+.stage .s-name{font-size:12.5px;font-weight:700}
+.stage .s-sub{font-size:11px;color:var(--mut);margin-top:3px;min-height:28px}
+.stage.done .s-icon{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.5)}
+.stage.active .s-icon{background:linear-gradient(135deg,var(--indigo),var(--fuchsia));
+  box-shadow:0 0 26px rgba(139,92,246,.65);animation:glow 2s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 40px rgba(217,70,239,.8)}}
+.stage.active .s-name{color:#e9d5ff}
+.stage.failed .s-icon{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.5)}
+.j-line{position:absolute;top:29px;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,rgba(99,102,241,.15),rgba(99,102,241,.5),rgba(217,70,239,.5),rgba(99,102,241,.15));
+  background-size:200% 100%;animation:flow 3s linear infinite;z-index:0}
+@keyframes flow{to{background-position:200% 0}}
+.now-card{margin-top:18px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);
+  border-radius:16px;padding:16px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.now-card .thumb{width:64px;height:96px;border-radius:10px;object-fit:cover;background:#111;flex:none}
+.now-card .thumb.ph{display:grid;place-items:center;font-size:24px;color:var(--mut)}
+.now-info{flex:1;min-width:200px}
+.now-info .t{font-weight:700;font-size:15px;margin-bottom:4px}
+.now-info .st{font-size:12.5px;color:var(--mut)}
+.pbar{height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin-top:10px}
+.pbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--indigo),var(--fuchsia));
+  background-size:200% 100%;animation:flow 2.2s linear infinite;transition:width .8s ease}
+.pct{font-family:"Space Grotesk";font-weight:700;font-size:20px;color:#e9d5ff}
+
+/* main grid */
+.grid{display:grid;grid-template-columns:1.9fr 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.stages{grid-template-columns:repeat(5,1fr)}.counters{grid-template-columns:repeat(2,1fr)}}
+
+/* video cards */
+.vcard{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;backdrop-filter:blur(8px);transition:.25s;margin-bottom:18px}
+.vcard:hover{transform:translateY(-3px);border-color:rgba(139,92,246,.4);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+.vcard video{width:100%;aspect-ratio:16/10;object-fit:cover;background:#0b0b14;display:block}
+.vid-ph{aspect-ratio:16/10;display:grid;place-items:center;background:
+  radial-gradient(circle at 50% 30%,rgba(139,92,246,.25),transparent 70%),#0b0b14;
+  font-size:15px;color:var(--mut);text-align:center;padding:20px}
+.vbody{padding:18px 20px 20px}
+.vtitle{font-weight:700;font-size:16.5px;line-height:1.4;margin-bottom:6px}
+.vdesc{color:var(--mut);font-size:13.5px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.badge{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;letter-spacing:.3px;
+  background:rgba(255,255,255,.07);border:1px solid var(--border)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;
+  padding:5px 12px;border-radius:999px;letter-spacing:.4px}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-Pending{background:rgba(156,163,175,.13);color:#d1d5db;border:1px solid rgba(156,163,175,.35)}
+.st-InProgress{background:rgba(96,165,250,.13);color:#93c5fd;border:1px solid rgba(96,165,250,.4)}
+.st-InProgress::before{animation:pulse 1.4s infinite}
+.st-Completed{background:rgba(52,211,153,.13);color:#6ee7b7;border:1px solid rgba(52,211,153,.4)}
+.st-Failed{background:rgba(248,113,113,.13);color:#fca5a5;border:1px solid rgba(248,113,113,.4)}
+.ap-Pending{background:rgba(251,191,36,.12);color:#fcd34d;border:1px solid rgba(251,191,36,.35)}
+.ap-Approved{background:rgba(52,211,153,.12);color:#6ee7b7;border:1px solid rgba(52,211,153,.35)}
+.ap-Rejected{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.35)}
+.plats{display:flex;gap:10px;margin-top:12px}
+.plat{flex:1;text-align:center;font-size:11px;font-weight:700;color:var(--mut);
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:9px 4px}
+.plat.done{color:#6ee7b7;border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.08)}
+.plat .ic{font-size:17px;display:block;margin-bottom:3px}
+.vmeta{display:flex;justify-content:space-between;align-items:center;margin-top:12px;
+  font-size:12px;color:var(--mut)}
+.fail-reason{margin-top:10px;font-size:12.5px;color:#fca5a5;background:rgba(248,113,113,.08);
+  border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:8px 12px}
+
+/* feed */
+.feed{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
+  backdrop-filter:blur(8px);padding:20px;position:sticky;top:76px;max-height:80vh;overflow:auto}
+.feed h3{font-size:16px;margin-bottom:4px}
+.feed .fsub{font-size:12px;color:var(--mut);margin-bottom:14px}
+.ev{display:flex;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06);animation:evin .4s ease}
+@keyframes evin{from{opacity:0;transform:translateY(-8px)}}
+.ev .eic{width:34px;height:34px;flex:none;border-radius:11px;display:grid;place-items:center;font-size:16px;
+  background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3)}
+.ev .et{font-size:13px;font-weight:600;line-height:1.45}
+.ev .etime{font-size:11.5px;color:var(--mut);margin-top:2px}
+.empty{text-align:center;color:var(--mut);padding:34px 16px;font-size:14px;line-height:1.7}
+
+/* stats strip */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
+.stat b{font-family:"Space Grotesk";font-size:24px;display:block}
+.stat span{font-size:12px;color:var(--mut)}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}.stages{grid-template-columns:repeat(3,1fr)}.j-line{display:none}}
+
+/* how it works */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:800px){.steps{grid-template-columns:repeat(2,1fr)}}
+.step{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:22px 18px;transition:.25s}
+.step:hover{transform:translateY(-4px);border-color:rgba(139,92,246,.45)}
+.step .n{font-family:"Space Grotesk";font-size:13px;font-weight:700;color:var(--violet);letter-spacing:1px}
+.step .ic{font-size:30px;margin:10px 0}
+.step h3{font-size:15px;margin-bottom:6px}
+.step p{font-size:13px;color:var(--mut);line-height:1.6}
+
+footer{text-align:center;color:var(--mut);font-size:12.5px;padding:44px 0 34px;line-height:1.8}
+footer a{color:#c4b5fd}
+
+/* toasts */
+#toasts{position:fixed;bottom:22px;right:22px;z-index:99;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,360px)}
+.toast{background:rgba(20,20,35,.92);border:1px solid rgba(139,92,246,.5);border-radius:14px;
+  padding:13px 16px;font-size:13.5px;font-weight:600;backdrop-filter:blur(10px);
+  box-shadow:0 12px 34px rgba(0,0,0,.5);animation:tin .35s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes tin{from{opacity:0;transform:translateX(30px)}}
+.toast small{display:block;font-weight:400;color:var(--mut);font-size:12px;margin-top:2px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div><div class="orb orb2"></div>
+
+<nav><div class="nav-in">
+  <div class="logo">🎬</div>
+  <div class="brand">Social Content Automation<small>AI Video Factory</small></div>
+  <span class="live"><span class="dot"></span>LIVE</span>
+  <div class="spacer"></div>
+  <span class="clock" id="clock">--:--</span>
+  <button class="share" id="shareBtn" title="Copy public link">🔗 Share</button>
+</div></nav>
+
+<div class="wrap">
+  <section class="hero">
+    <span class="kicker">🤖 Fully autonomous pipeline</span>
+    <h1>Watch AI create videos,<br><span class="grad">live as it happens.</span></h1>
+    <p>Har video ek journey hai — Google Sheet mein ek title se shuru, AI generation, Hindi voiceover, approval, aur phir auto-publish. Sab kuch yahin, real-time.</p>
+    <div class="counters">
+      <div class="counter"><b id="cDone">0</b><span>Completed</span></div>
+      <div class="counter"><b id="cProg">0</b><span>In Progress</span></div>
+      <div class="counter"><b id="cAppr">0</b><span>Awaiting Approval</span></div>
+      <div class="counter"><b id="cPub">0</b><span>Published</span></div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>🛤️ The Journey</h2><p>latest video abhi kahan hai</p></div>
+  <section class="journey">
+    <div class="j-line"></div>
+    <div class="stages" id="stages"></div>
+    <div class="now-card" id="nowCard"></div>
+  </section>
+
+  <div class="sec"><h2>🎞️ Videos</h2><p>newest first · auto-refreshes every 45s</p></div>
+  <div class="grid">
+    <div id="cards"></div>
+    <aside class="feed">
+      <h3>⚡ Live Activity</h3>
+      <div class="fsub">har change yahin dikhega</div>
+      <div id="feed"></div>
+    </aside>
+  </div>
+
+  <div class="sec"><h2>📊 Factory Stats</h2></div>
+  <section class="stats">
+    <div class="stat"><b id="sTotal">0</b><span>Total videos</span></div>
+    <div class="stat"><b id="sRate">—</b><span>Success rate</span></div>
+    <div class="stat"><b id="sWait">0</b><span>Awaiting approval</span></div>
+    <div class="stat"><b id="sFail">0</b><span>Failed</span></div>
+  </section>
+
+  <div class="sec"><h2>⚙️ How it works</h2></div>
+  <section class="steps">
+    <div class="step"><div class="n">STEP 1</div><div class="ic">📝</div><h3>Title in Sheet</h3><p>Main Google Sheet mein sirf ek title likhta hoon — baaki automation sambhalta hai.</p></div>
+    <div class="step"><div class="n">STEP 2</div><div class="ic">🎬</div><h3>AI Generates</h3><p>Scenes, characters aur Hindi voiceover — free AI engine par, quality benchmark ke saath.</p></div>
+    <div class="step"><div class="n">STEP 3</div><div class="ic">✅</div><h3>I Approve</h3><p>Video taiyaar hote hi mujhe email aata hai — ek word reply: Approve ya Reject.</p></div>
+    <div class="step"><div class="n">STEP 4</div><div class="ic">🚀</div><h3>Auto-Publish</h3><p>Approved video YouTube, Facebook aur Instagram par khud publish ho jaati hai.</p></div>
+  </section>
+
+  <footer>
+    Built with 🤖 by <b>Social Content Automation</b> · data refreshes every 45 seconds<br>
+    <span id="genAt"></span>
+  </footer>
+</div>
+<div id="toasts"></div>
+<script>
+/* ============================================================
+   AUTOMATION LIVE — dashboard logic
+   Data: <webapp-url>?action=publicRows  (public, no secret)
+   Add ?mock=1 to preview with demo data.
+   ============================================================ */
+(function(){
+"use strict";
+
+/* ---------- config ---------- */
+var POLL_MS = 45000;
+var qs = new URLSearchParams(window.location.search);
+var USE_MOCK = qs.get("mock") === "1";
+var API = (function(){
+  var u = new URL(window.location.href);
+  u.search = "";
+  u.searchParams.set("action", "publicRows");
+  return u.toString();
+})();
+
+var STAGES = [
+  {icon:"📝", name:"Idea",        sub:"title sheet mein"},
+  {icon:"🎬", name:"Generating",  sub:"AI scenes bana raha"},
+  {icon:"🎙️", name:"Voiceover",   sub:"Hindi voice + polish"},
+  {icon:"✅", name:"Approval",    sub:"email ka intezaar"},
+  {icon:"🚀", name:"Published",   sub:"live everywhere"}
+];
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+function parseProgress(v){
+  if (v == null) return 0;
+  var raw = String(v).trim();
+  var n = parseFloat(raw.replace("%",""));
+  if (isNaN(n)) return 0;
+  if (raw.indexOf("%") === -1 && n > 0 && n <= 1) n = n * 100; // "0.05" -> 5
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+function parseIST(s){
+  if (!s) return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s).trim());
+  if (!m) return null;
+  var d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4]-5, +m[5]-30, 0));
+  return isNaN(d.getTime()) ? null : d;
+}
+function relTime(s){
+  var d = parseIST(s);
+  if (!d) return "—";
+  var sec = Math.max(0, Math.round((Date.now() - d.getTime())/1000));
+  if (sec < 60) return "just now";
+  var min = Math.floor(sec/60);
+  if (min < 60) return min + " min ago";
+  var h = Math.floor(min/60);
+  if (h < 24) return h + " hr ago";
+  return Math.floor(h/24) + " days ago";
+}
+function platDone(v){ return /^done/i.test(String(v||"").trim()); }
+
+/* stage: 0 idea, 1 generating, 2 voiceover, 3 approval, 4 published, -1 failed */
+function stageOf(r){
+  var s = String(r["Status"]||"").trim();
+  var ap = String(r["Approval Status"]||"").trim();
+  var up = String(r["Upload Status"]||"").trim();
+  if (s === "Failed") return -1;
+  if (!s || s === "Pending") return 0;
+  if (s === "In Progress") return parseProgress(r["Progress"]) >= 70 ? 2 : 1;
+  if (s === "Completed"){
+    if (ap === "Approved") return platDone(up) ? 4 : 3;
+    if (ap === "Rejected") return 3;
+    return 3;
+  }
+  return 0;
+}
+function stageLabel(r){
+  var st = stageOf(r);
+  var ap = String(r["Approval Status"]||"").trim();
+  var up = String(r["Upload Status"]||"").trim();
+  if (st === -1) return "Failed";
+  if (st === 4) return "Published 🚀";
+  if (st === 3){
+    if (ap === "Approved") return up.indexOf("Blocked") === 0 ? "Approved · publishing blocked" : "Approved · publishing…";
+    if (ap === "Rejected") return "Rejected";
+    return "Awaiting my approval";
+  }
+  return STAGES[st].name + "…";
+}
+function statusPill(s){
+  s = String(s||"").trim() || "Pending";
+  var cls = "st-" + s.replace(/\s+/g,"");
+  return '<span class="pill ' + cls + '">' + esc(s) + "</span>";
+}
+function approvalPill(a){
+  a = String(a||"").trim();
+  if (!a) return "";
+  return '<span class="pill ap-' + a + '">' + esc(a) + "</span>";
+}
+
+/* ---------- mock data (for ?mock=1 preview) ---------- */
+var MOCK_ROWS = [
+  {row_number:4,"Video Title":"Cat opens a chai stall, dog becomes first customer","Description":"Mimi the cat sets up a tiny roadside chai stall; Bruno the dog queues up as customer number one.","Video Length":"15","Aspect Ratio":"Vertical (9:16)","Status":"In Progress","Progress":"55%","Video URL":"","Approval Status":"","Upload Status":"","YouTube Status":"","Facebook Status":"","Instagram Status":"","Published Info":"","Failure Reason":"","Last Updated":"2026-10-02 04:02 IST"},
+  {row_number:3,"Video Title":"Dog and cat dance at a Diwali party","Description":"Bruno and Mimi show off bhangra moves under fairy lights.","Video Length":"30","Aspect Ratio":"Vertical (9:16)","Status":"Completed","Progress":"100%","Video URL":"","Approval Status":"Pending","Upload Status":"","YouTube Status":"","Facebook Status":"","Instagram Status":"","Published Info":"","Failure Reason":"","Last Updated":"2026-10-02 02:14 IST"},
+  {row_number:2,"Video Title":"An Indian dog and cat's wedding — the cat suddenly cancels it, the dog's heart breaks.","Description":"Bruno, a cheerful Indian street dog in a golden sherwani, marries Mimi, an elegant Indian cat in a red bridal lehenga.","Video Length":"15","Aspect Ratio":"Vertical (9:16)","Status":"Completed","Progress":"100%","Video URL":"","Approval Status":"Approved","Upload Status":"Blocked — social accounts pending","YouTube Status":"","Facebook Status":"","Instagram Status":"","Published Info":"Approved 2026-10-02 04:02 IST; publish awaiting accounts","Failure Reason":"","Last Updated":"2026-10-02 04:02 IST"}
+];
+
+/* ---------- state ---------- */
+var prevRows = {};   // row_number -> {status, approval, upload}
+var feedSeeded = false;
+
+/* ---------- data ---------- */
+function fetchRows(){
+  if (USE_MOCK) return Promise.resolve({rows: MOCK_ROWS, generatedAt: new Date().toISOString()});
+  return fetch(API, {cache:"no-store"}).then(function(res){
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  });
+}
+/* ---------- render: counters & stats ---------- */
+var counters = {done:0, prog:0, appr:0, pub:0};
+function countUp(el, to){
+  var from = parseInt(el.textContent, 10) || 0;
+  if (from === to){ el.textContent = to; return; }
+  var t0 = performance.now(), dur = 700;
+  function tick(t){
+    var k = Math.min(1, (t - t0)/dur);
+    el.textContent = Math.round(from + (to-from)*k);
+    if (k < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+function renderCounters(rows){
+  var n = {done:0, prog:0, appr:0, pub:0};
+  rows.forEach(function(r){
+    var s = String(r["Status"]||"").trim();
+    if (s === "Completed") n.done++;
+    if (s === "In Progress") n.prog++;
+    if (s === "Completed" && String(r["Approval Status"]||"").trim() === "Pending") n.appr++;
+    if (platDone(r["Upload Status"])) n.pub++;
+  });
+  countUp($("cDone"), n.done); countUp($("cProg"), n.prog);
+  countUp($("cAppr"), n.appr); countUp($("cPub"), n.pub);
+  $("sTotal").textContent = rows.length;
+  var failed = rows.filter(function(r){ return String(r["Status"]).trim()==="Failed"; }).length;
+  $("sFail").textContent = failed;
+  $("sWait").textContent = n.appr;
+  $("sRate").textContent = rows.length ? Math.round(100*n.done/rows.length) + "%" : "—";
+}
+
+/* ---------- render: journey ---------- */
+function renderJourney(rows){
+  var box = $("stages");
+  var active = null, activeStage = -2;
+  var sorted = rows.slice().sort(function(a,b){
+    var da = parseIST(a["Last Updated"]), db = parseIST(b["Last Updated"]);
+    return (db?db.getTime():0) - (da?da.getTime():0);
+  });
+  for (var i=0;i<sorted.length;i++){
+    var st = stageOf(sorted[i]);
+    if (st >= 0 && st <= 4){ active = sorted[i]; activeStage = st; break; }
+  }
+  if (!active){
+    for (var j=0;j<sorted.length;j++){ if (stageOf(sorted[j])===-1){ active=sorted[j]; activeStage=-1; break; } }
+  }
+  var html = "";
+  STAGES.forEach(function(sg, idx){
+    var cls = "";
+    if (activeStage === -1) cls = "failed";
+    else if (idx < activeStage) cls = "done";
+    else if (idx === activeStage) cls = "active";
+    html += '<div class="stage ' + cls + '"><div class="s-icon">' + sg.icon + '</div>' +
+            '<div class="s-name">' + sg.name + '</div><div class="s-sub">' + sg.sub + "</div></div>";
+  });
+  box.innerHTML = html;
+
+  var nc = $("nowCard");
+  if (!active){
+    nc.innerHTML = '<div class="now-info"><div class="t">Factory is warming up 🔥</div>' +
+      '<div class="st">Sheet mein pehla title likhte hi journey yahin dikhegi.</div></div>';
+    return;
+  }
+  var p = parseProgress(active["Video URL"] ? 100 : active["Progress"]);
+  if (String(active["Status"]).trim()==="Completed") p = 100;
+  var vurl = String(active["Video URL"]||"").trim();
+  var thumb = vurl ? '<video class="thumb" src="'+esc(vurl)+'" muted playsinline preload="metadata"></video>'
+                   : '<div class="thumb ph">🎬</div>';
+  nc.innerHTML = thumb +
+    '<div class="now-info"><div class="t">' + esc(active["Video Title"]||"Untitled") + "</div>" +
+    '<div class="st">Row ' + active.row_number + " · " + esc(stageLabel(active)) + " · updated " + esc(relTime(active["Last Updated"])) + "</div>" +
+    '<div class="pbar"><i style="width:' + p + '%"></i></div></div>' +
+    '<div class="pct">' + p + "%</div>";
+}
+
+/* ---------- render: cards ---------- */
+function renderCards(rows){
+  var box = $("cards");
+  if (!rows.length){
+    box.innerHTML = '<div class="empty">🎬<br><br>No videos yet.<br>The factory is warming up —<br>pehla title Sheet mein likhte hi yahan dikhega.</div>';
+    return;
+  }
+  var sorted = rows.slice().sort(function(a,b){ return b.row_number - a.row_number; });
+  box.innerHTML = sorted.map(function(r){
+    var vurl = String(r["Video URL"]||"").trim();
+    var p = String(r["Status"]).trim()==="Completed" ? 100 : parseProgress(r["Progress"]);
+    var media = vurl
+      ? '<video src="'+esc(vurl)+'" controls playsinline preload="metadata"></video>'
+      : '<div class="vid-ph">🎥<br>Rendering…<br><span style="font-size:12px">video ban rahi hai</span></div>';
+    function plat(name, val, icon){
+      var done = platDone(val);
+      return '<div class="plat' + (done?" done":"") + '"><span class="ic">'+icon+'</span>'+
+             esc(name)+"<br>"+(done?"✓ Done":"—")+"</div>";
+    }
+    var fail = String(r["Failure Reason"]||"").trim();
+    return '<article class="vcard">' + media + '<div class="vbody">' +
+      '<div class="vtitle">'+esc(r["Video Title"]||"Untitled")+"</div>" +
+      '<div class="vdesc">'+esc(r["Description"]||"")+"</div>" +
+      '<div class="badges">' + statusPill(r["Status"]) + approvalPill(r["Approval Status"]) +
+      '<span class="badge">⏱️ '+esc(r["Video Length"]||"—")+'s</span>' +
+      '<span class="badge">📐 '+esc(r["Aspect Ratio"]||"—")+'</span>' +
+      '<span class="badge">🧭 '+esc(stageLabel(r))+'</span></div>' +
+      '<div class="pbar"><i style="width:'+p+'%"></i></div>' +
+      '<div class="plats">' + plat("YouTube", r["YouTube Status"],"▶️") +
+        plat("Facebook", r["Facebook Status"],"📘") + plat("Instagram", r["Instagram Status"],"📸") + "</div>" +
+      (fail ? '<div class="fail-reason">⚠️ '+esc(fail)+"</div>" : "") +
+      '<div class="vmeta"><span>Row '+r.row_number+'</span><span>updated '+esc(relTime(r["Last Updated"]))+"</span></div>" +
+      "</div></article>";
+  }).join("");
+}
+
+/* ---------- feed + toasts ---------- */
+function toast(msg, sub){
+  var t = document.createElement("div");
+  t.className = "toast";
+  t.innerHTML = esc(msg) + (sub ? "<small>"+esc(sub)+"</small>" : "");
+  $("toasts").appendChild(t);
+  setTimeout(function(){ t.style.opacity="0"; t.style.transition="opacity .4s";
+    setTimeout(function(){ t.remove(); }, 450); }, 5200);
+}
+function feedEvent(icon, text, timeStr){
+  var feed = $("feed");
+  var d = document.createElement("div");
+  d.className = "ev";
+  d.innerHTML = '<div class="eic">'+icon+'</div><div><div class="et">'+esc(text)+
+    '</div><div class="etime">'+esc(timeStr)+"</div></div>";
+  feed.prepend(d);
+  while (feed.children.length > 14) feed.lastChild.remove();
+}
+function seedFeed(rows){
+  var evs = [];
+  rows.forEach(function(r){
+    if (!r["Last Updated"]) return;
+    evs.push({r:r, t:parseIST(r["Last Updated"])});
+  });
+  evs.sort(function(a,b){ return (b.t?b.t.getTime():0)-(a.t?a.t.getTime():0); });
+  evs.slice(0,8).forEach(function(e){
+    feedEvent("📡", "Row "+e.r.row_number+": "+stageLabel(e.r), relTime(e.r["Last Updated"]));
+  });
+  if (!evs.length) $("feed").innerHTML = '<div class="empty">Koi activity nahi —<br>jaise hi kuch hoga, yahin dikhega ⚡</div>';
+}
+function detectChanges(rows){
+  rows.forEach(function(r){
+    var key = r.row_number;
+    var cur = {
+      status: String(r["Status"]||"").trim(),
+      approval: String(r["Approval Status"]||"").trim(),
+      upload: String(r["Upload Status"]||"").trim()
+    };
+    var prev = prevRows[key];
+    prevRows[key] = cur;
+    if (!prev) return; // first sight — initial feed already seeded
+    var label = "Row " + key;
+    if (cur.status === "Completed" && prev.status !== "Completed"){
+      feedEvent("🎉", label+": video ready!", "just now");
+      toast("🎉 Video ready!", String(r["Video Title"]||"").slice(0,60));
+    } else if (cur.status === "In Progress" && prev.status !== "In Progress"){
+      feedEvent("🎬", label+": AI ne generation shuru ki", "just now");
+      toast("🎬 Generating…", "Row "+key+" factory mein hai");
+    } else if (cur.status === "Failed" && prev.status !== "Failed"){
+      feedEvent("❌", label+": failed", "just now");
+      toast("❌ Video failed", String(r["Failure Reason"]||"").slice(0,80));
+    } else if (cur.approval === "Approved" && prev.approval !== "Approved"){
+      feedEvent("✅", label+": approved!", "just now");
+      toast("✅ Approved!", "Row "+key+" publish ke liye ready");
+    } else if (cur.approval === "Rejected" && prev.approval !== "Rejected"){
+      feedEvent("🚫", label+": rejected", "just now");
+    } else if (platDone(cur.upload) && !platDone(prev.upload)){
+      feedEvent("🚀", label+": published!", "just now");
+      toast("🚀 Published!", "Row "+key+" live hai");
+    } else if (cur.status !== prev.status || cur.upload !== prev.upload){
+      feedEvent("📡", label+": "+stageLabel(r), "just now");
+    }
+  });
+}
+
+/* ---------- main loop ---------- */
+function tick(){
+  fetchRows().then(function(data){
+    var rows = (data && data.rows) || [];
+    if (data && data.generatedAt){
+      var g = new Date(data.generatedAt);
+      $("genAt").textContent = "data synced " + g.toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit"});
+    }
+    renderCounters(rows);
+    renderJourney(rows);
+    renderCards(rows);
+    if (!feedSeeded){ seedFeed(rows); feedSeeded = true; }
+    else detectChanges(rows);
+  }).catch(function(err){
+    if (!feedSeeded){
+      $("cards").innerHTML = '<div class="empty">⚠️<br><br>Live data load nahi ho paya.<br>Thodi der mein retry hoga…<br><span style="font-size:12px">'+esc(err.message||err)+"</span></div>";
+    }
+  });
+}
+function clock(){
+  try{
+    $("clock").textContent = new Intl.DateTimeFormat("en-IN",{
+      timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true
+    }).format(new Date()) + " IST";
+  }catch(e){ $("clock").textContent = new Date().toLocaleTimeString(); }
+}
+$("shareBtn").addEventListener("click", function(){
+  var url = window.location.href.split("?")[0] + "?view=dashboard";
+  function done(){ toast("🔗 Link copied!", "kisi ko bhi bhejo — no login needed"); }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done, function(){ prompt("Copy this link:", url); });
+  } else { prompt("Copy this link:", url); }
+});
+
+clock(); setInterval(clock, 1000);
+tick(); setInterval(tick, POLL_MS);
+})();
+</script>
+</body>
+</html>

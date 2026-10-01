@@ -1,6 +1,6 @@
 # PROMPT.md — Master Lock File (V2, consistency-locked)
 
-Project: AI-Social-Media-Content-Automation
+Project: Social-Content-Automation
 Video: Dog and Cat Doing Marriage at Indian Wedding Hall
 Run: storage/pending/2026-10-01-row2-v2/
 Engine: Hugging Face Lightricks/ltx-video-distilled (image-to-video), local ffmpeg upscale

@@ -1,11 +1,11 @@
 <div align="center">
 
-# 🎬 AI Social Media Content Automation
+# 🎬 Social Content Automation
 
 **An end-to-end, AI-orchestrated pipeline that turns a single row in a spreadsheet into a finished short-form video — generated, assembled, approved by a human, and published to Instagram, Facebook and YouTube.**
 
-[![Generate](https://github.com/itzmoksh01/AI-Social-Media-Content-Automation/actions/workflows/generate.yml/badge.svg)](https://github.com/itzmoksh01/AI-Social-Media-Content-Automation/actions/workflows/generate.yml)
-[![Publish](https://github.com/itzmoksh01/AI-Social-Media-Content-Automation/actions/workflows/publish.yml/badge.svg)](https://github.com/itzmoksh01/AI-Social-Media-Content-Automation/actions/workflows/publish.yml)
+[![Generate](https://github.com/itzmoksh01/Social-Content-Automation/actions/workflows/generate.yml/badge.svg)](https://github.com/itzmoksh01/Social-Content-Automation/actions/workflows/generate.yml)
+[![Publish](https://github.com/itzmoksh01/Social-Content-Automation/actions/workflows/publish.yml/badge.svg)](https://github.com/itzmoksh01/Social-Content-Automation/actions/workflows/publish.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -50,8 +50,8 @@ flowchart LR
 ## 🚀 Quick start
 
 ```bash
-git clone https://github.com/itzmoksh01/AI-Social-Media-Content-Automation.git
-cd AI-Social-Media-Content-Automation
+git clone https://github.com/itzmoksh01/Social-Content-Automation.git
+cd Social-Content-Automation
 
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate

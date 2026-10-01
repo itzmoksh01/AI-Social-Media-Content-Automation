@@ -44,6 +44,7 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)}70%{box-shadow:0 0 0 9px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
 .spacer{flex:1}
 .clock{font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums}
+.sync{font-size:11.5px;color:var(--green);font-variant-numeric:tabular-nums}
 .share{cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--txt);
   font:600 13px Inter;padding:9px 16px;border-radius:999px;transition:.2s}
 .share:hover{background:var(--panel2);transform:translateY(-1px)}
@@ -99,6 +100,12 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop
 .pbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--indigo),var(--fuchsia));
   background-size:200% 100%;animation:flow 2.2s linear infinite;transition:width .8s ease}
 .pct{font-family:"Space Grotesk";font-weight:700;font-size:20px;color:#e9d5ff}
+.happening{margin-top:10px;font-size:13px;font-weight:600;color:#c4b5fd;display:flex;align-items:center;gap:8px}
+.happening .hdot{width:8px;height:8px;border-radius:50%;background:var(--fuchsia);animation:pulse 1.2s infinite;flex:none}
+.happening .dots::after{content:"";animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.detail-line{margin-top:10px;font-size:12.5px;color:var(--mut);display:flex;gap:14px;flex-wrap:wrap}
+.detail-line b{color:var(--txt);font-weight:600}
 
 /* main grid */
 .grid{display:grid;grid-template-columns:1.9fr 1fr;gap:18px;align-items:start}
@@ -193,6 +200,7 @@ footer a{color:#c4b5fd}
   <span class="live"><span class="dot"></span>LIVE</span>
   <div class="spacer"></div>
   <span class="clock" id="clock">--:--</span>
+  <span class="sync" id="syncAge" title="last data sync">· syncing…</span>
   <button class="share" id="shareBtn" title="Copy public link">🔗 Share</button>
 </div></nav>
 
@@ -216,7 +224,7 @@ footer a{color:#c4b5fd}
     <div class="now-card" id="nowCard"></div>
   </section>
 
-  <div class="sec"><h2>🎞️ Videos</h2><p>newest first · auto-refreshes every 45s</p></div>
+  <div class="sec"><h2>🎞️ Videos</h2><p>newest first · live refresh every 10s</p></div>
   <div class="grid">
     <div id="cards"></div>
     <aside class="feed">
@@ -243,7 +251,7 @@ footer a{color:#c4b5fd}
   </section>
 
   <footer>
-    Built with 🤖 by <b>Social Content Automation</b> · data refreshes every 45 seconds<br>
+    Built with 🤖 by <b>Social Content Automation</b> · live data every 10 seconds<br>
     <span id="genAt"></span>
   </footer>
 </div>
@@ -258,7 +266,7 @@ footer a{color:#c4b5fd}
 "use strict";
 
 /* ---------- config ---------- */
-var POLL_MS = 45000;
+var POLL_MS = 10000;
 var qs = new URLSearchParams(window.location.search);
 var USE_MOCK = qs.get("mock") === "1";
 var API = (function(){
@@ -301,13 +309,35 @@ function parseIST(s){
 function relTime(s){
   var d = parseIST(s);
   if (!d) return "—";
-  var sec = Math.max(0, Math.round((Date.now() - d.getTime())/1000));
-  if (sec < 60) return "just now";
+  return relAgo(Date.now() - d.getTime());
+}
+function relAgo(ms){
+  var sec = Math.max(0, Math.round(ms/1000));
+  if (sec < 5) return "just now";
+  if (sec < 60) return sec + " sec ago";
   var min = Math.floor(sec/60);
   if (min < 60) return min + " min ago";
   var h = Math.floor(min/60);
-  if (h < 24) return h + " hr ago";
+  if (h < 24) return h + " hr " + (min%60) + " min ago";
   return Math.floor(h/24) + " days ago";
+}
+function scenesFor(len){
+  var n = parseInt(len, 10) || 15;
+  return n <= 15 ? 2 : n <= 30 ? 3 : n <= 45 ? 5 : 6;
+}
+/* rough ETA from progress + elapsed time in stage */
+function etaText(r){
+  var s = String(r["Status"]||"").trim();
+  if (s !== "In Progress") return "";
+  var p = parseProgress(r["Progress"]);
+  var d = parseIST(r["Last Updated"]);
+  if (!d || p < 8 || p >= 100) return "";
+  var elapsedMin = (Date.now() - d.getTime())/60000;
+  if (elapsedMin < 1) return "";
+  var etaMin = Math.round(elapsedMin * (100 - p) / p);
+  if (etaMin < 1) return "finishing up…";
+  if (etaMin < 90) return "~" + etaMin + " min remaining (est.)";
+  return "~" + Math.floor(etaMin/60) + " hr " + (etaMin%60) + " min remaining (est.)";
 }
 function platDone(v){ return /^done/i.test(String(v||"").trim()); }
 
@@ -360,6 +390,13 @@ var MOCK_ROWS = [
 /* ---------- state ---------- */
 var prevRows = {};   // row_number -> {status, approval, upload}
 var feedSeeded = false;
+var lastSyncAt = 0;
+var tweenProg = {}, tweenTarget = {};  // smooth per-second progress animation
+function progStart(key, target){
+  tweenTarget[key] = target;
+  if (!(key in tweenProg)) tweenProg[key] = 0;
+  return tweenProg[key];
+}
 
 /* ---------- data ---------- */
 function fetchRows(){
@@ -437,11 +474,19 @@ function renderJourney(rows){
   var vurl = String(active["Video URL"]||"").trim();
   var thumb = vurl ? '<video class="thumb" src="'+esc(vurl)+'" muted playsinline preload="metadata"></video>'
                    : '<div class="thumb ph">🎬</div>';
+  var happening = activeStage === -1 ? "❌ Failed — neeche Failure Reason dekho"
+    : activeStage === 0 ? "Sheet mein ready — poller ke next run ka intezaar"
+    : activeStage === 1 ? "AI scenes render kar raha hai"
+    : activeStage === 2 ? "Hindi voiceover mix ho raha hai"
+    : activeStage === 3 ? "Approval email ka intezaar" : "Sab platforms par live";
+  var nckey = "now-" + active.row_number;
   nc.innerHTML = thumb +
     '<div class="now-info"><div class="t">' + esc(active["Video Title"]||"Untitled") + "</div>" +
-    '<div class="st">Row ' + active.row_number + " · " + esc(stageLabel(active)) + " · updated " + esc(relTime(active["Last Updated"])) + "</div>" +
-    '<div class="pbar"><i style="width:' + p + '%"></i></div></div>' +
-    '<div class="pct">' + p + "%</div>";
+    '<div class="st">Row ' + active.row_number + " · " + esc(stageLabel(active)) + "</div>" +
+    '<div class="happening"><span class="hdot"></span><span>' + esc(happening) + '<span class="dots"></span></span></div>' +
+    (active["Last Updated"] ? '<div class="st" style="margin-top:6px">⏳ <span data-elapsed="'+esc(active["Last Updated"])+'">…</span> is stage mein</div>' : "") +
+    '<div class="pbar"><i data-prog="'+nckey+'" style="width:'+progStart(nckey, p)+'%"></i></div></div>' +
+    '<div class="pct" data-pct="'+nckey+'">' + Math.round(tweenProg[nckey]||0) + "%</div>";
 }
 
 /* ---------- render: cards ---------- */
@@ -464,6 +509,12 @@ function renderCards(rows){
              esc(name)+"<br>"+(done?"✓ Done":"—")+"</div>";
     }
     var fail = String(r["Failure Reason"]||"").trim();
+    var eta = etaText(r);
+    var detHtml = '<div class="detail-line">' +
+      '<span>🎞️ <b>'+scenesFor(r["Video Length"])+'</b> scenes</span>' +
+      (r["Last Updated"] ? '<span>⏳ <b data-elapsed="'+esc(r["Last Updated"])+'">…</b> in this stage</span>' : '') +
+      (eta ? '<span>🔮 '+esc(eta)+'</span>' : '') +
+      '</div>';
     return '<article class="vcard">' + media + '<div class="vbody">' +
       '<div class="vtitle">'+esc(r["Video Title"]||"Untitled")+"</div>" +
       '<div class="vdesc">'+esc(r["Description"]||"")+"</div>" +
@@ -471,11 +522,12 @@ function renderCards(rows){
       '<span class="badge">⏱️ '+esc(r["Video Length"]||"—")+'s</span>' +
       '<span class="badge">📐 '+esc(r["Aspect Ratio"]||"—")+'</span>' +
       '<span class="badge">🧭 '+esc(stageLabel(r))+'</span></div>' +
-      '<div class="pbar"><i style="width:'+p+'%"></i></div>' +
+      '<div class="pbar"><i data-prog="card-'+r.row_number+'" style="width:'+progStart("card-"+r.row_number, p)+'%"></i></div>' +
+      detHtml +
       '<div class="plats">' + plat("YouTube", r["YouTube Status"],"▶️") +
         plat("Facebook", r["Facebook Status"],"📘") + plat("Instagram", r["Instagram Status"],"📸") + "</div>" +
       (fail ? '<div class="fail-reason">⚠️ '+esc(fail)+"</div>" : "") +
-      '<div class="vmeta"><span>Row '+r.row_number+'</span><span>updated '+esc(relTime(r["Last Updated"]))+"</span></div>" +
+      '<div class="vmeta"><span>Row '+r.row_number+'</span><span>updated <span data-ts="'+esc(r["Last Updated"]||"")+'">'+esc(relTime(r["Last Updated"]))+'</span></span></div>' +
       "</div></article>";
   }).join("");
 }
@@ -489,12 +541,20 @@ function toast(msg, sub){
   setTimeout(function(){ t.style.opacity="0"; t.style.transition="opacity .4s";
     setTimeout(function(){ t.remove(); }, 450); }, 5200);
 }
-function feedEvent(icon, text, timeStr){
+function feedEvent(icon, text, rawTs){
   var feed = $("feed");
   var d = document.createElement("div");
   d.className = "ev";
+  var tsAttr, timeTxt;
+  if (rawTs){
+    tsAttr = ' data-ts="' + esc(rawTs) + '"';
+    timeTxt = relTime(rawTs);
+  } else {
+    tsAttr = ' data-now="' + Date.now() + '"';
+    timeTxt = "just now";
+  }
   d.innerHTML = '<div class="eic">'+icon+'</div><div><div class="et">'+esc(text)+
-    '</div><div class="etime">'+esc(timeStr)+"</div></div>";
+    '</div><div class="etime"'+tsAttr+'>'+esc(timeTxt)+"</div></div>";
   feed.prepend(d);
   while (feed.children.length > 14) feed.lastChild.remove();
 }
@@ -506,7 +566,7 @@ function seedFeed(rows){
   });
   evs.sort(function(a,b){ return (b.t?b.t.getTime():0)-(a.t?a.t.getTime():0); });
   evs.slice(0,8).forEach(function(e){
-    feedEvent("📡", "Row "+e.r.row_number+": "+stageLabel(e.r), relTime(e.r["Last Updated"]));
+    feedEvent("📡", "Row "+e.r.row_number+": "+stageLabel(e.r), e.r["Last Updated"]);
   });
   if (!evs.length) $("feed").innerHTML = '<div class="empty">Koi activity nahi —<br>jaise hi kuch hoga, yahin dikhega ⚡</div>';
 }
@@ -523,24 +583,24 @@ function detectChanges(rows){
     if (!prev) return; // first sight — initial feed already seeded
     var label = "Row " + key;
     if (cur.status === "Completed" && prev.status !== "Completed"){
-      feedEvent("🎉", label+": video ready!", "just now");
+      feedEvent("🎉", label+": video ready!", null);
       toast("🎉 Video ready!", String(r["Video Title"]||"").slice(0,60));
     } else if (cur.status === "In Progress" && prev.status !== "In Progress"){
-      feedEvent("🎬", label+": AI ne generation shuru ki", "just now");
+      feedEvent("🎬", label+": AI ne generation shuru ki", null);
       toast("🎬 Generating…", "Row "+key+" factory mein hai");
     } else if (cur.status === "Failed" && prev.status !== "Failed"){
-      feedEvent("❌", label+": failed", "just now");
+      feedEvent("❌", label+": failed", null);
       toast("❌ Video failed", String(r["Failure Reason"]||"").slice(0,80));
     } else if (cur.approval === "Approved" && prev.approval !== "Approved"){
-      feedEvent("✅", label+": approved!", "just now");
+      feedEvent("✅", label+": approved!", null);
       toast("✅ Approved!", "Row "+key+" publish ke liye ready");
     } else if (cur.approval === "Rejected" && prev.approval !== "Rejected"){
-      feedEvent("🚫", label+": rejected", "just now");
+      feedEvent("🚫", label+": rejected", null);
     } else if (platDone(cur.upload) && !platDone(prev.upload)){
-      feedEvent("🚀", label+": published!", "just now");
+      feedEvent("🚀", label+": published!", null);
       toast("🚀 Published!", "Row "+key+" live hai");
     } else if (cur.status !== prev.status || cur.upload !== prev.upload){
-      feedEvent("📡", label+": "+stageLabel(r), "just now");
+      feedEvent("📡", label+": "+stageLabel(r), null);
     }
   });
 }
@@ -549,7 +609,7 @@ function detectChanges(rows){
 function tick(){
   fetchRows().then(function(data){
     var rows = (data && data.rows) || [];
-    if (data && data.generatedAt){
+    lastSyncAt = Date.now();    if (data && data.generatedAt){
       var g = new Date(data.generatedAt);
       $("genAt").textContent = "data synced " + g.toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit"});
     }
@@ -571,6 +631,50 @@ function clock(){
     }).format(new Date()) + " IST";
   }catch(e){ $("clock").textContent = new Date().toLocaleTimeString(); }
 }
+/* every second: clock, relative times, sync age, elapsed, progress tween.
+   The page breathes every second; real data refreshes every POLL_MS. */
+function perSecond(){
+  clock();
+  var now = Date.now(), i, els, el;
+  if (lastSyncAt){
+    var s = Math.round((now - lastSyncAt)/1000);
+    $("syncAge").textContent = "· synced " + (s < 4 ? "just now" : s + "s ago");
+  }
+  els = document.querySelectorAll("[data-ts]");
+  for (i=0;i<els.length;i++){ el = els[i]; el.textContent = relTime(el.getAttribute("data-ts")); }
+  els = document.querySelectorAll("[data-now]");
+  for (i=0;i<els.length;i++){ el = els[i]; el.textContent = relAgo(now - (+el.getAttribute("data-now"))); }
+  els = document.querySelectorAll("[data-elapsed]");
+  for (i=0;i<els.length;i++){
+    el = els[i];
+    var d = parseIST(el.getAttribute("data-elapsed"));
+    el.textContent = d ? relAgo(now - d.getTime()) : "—";
+  }
+  var moved = false;
+  els = document.querySelectorAll("[data-prog]");
+  for (i=0;i<els.length;i++){
+    el = els[i];
+    var k = el.getAttribute("data-prog");
+    var t = tweenTarget[k];
+    if (t == null) continue;
+    var cur = tweenProg[k] || 0;
+    if (Math.abs(t - cur) > 0.4){
+      var step = (t - cur) * 0.22;
+      if (Math.abs(step) < 0.4) step = t > cur ? 0.4 : -0.4;
+      cur = Math.round((cur + step) * 10) / 10;
+      if ((step > 0 && cur > t) || (step < 0 && cur < t)) cur = t;
+      tweenProg[k] = cur; moved = true;
+      el.style.width = cur + "%";
+    }
+  }
+  if (moved){
+    els = document.querySelectorAll("[data-pct]");
+    for (i=0;i<els.length;i++){
+      el = els[i];
+      el.textContent = Math.round(tweenProg[el.getAttribute("data-pct")] || 0) + "%";
+    }
+  }
+}
 $("shareBtn").addEventListener("click", function(){
   var url = window.location.href.split("?")[0] + "?view=dashboard";
   function done(){ toast("🔗 Link copied!", "kisi ko bhi bhejo — no login needed"); }
@@ -579,7 +683,7 @@ $("shareBtn").addEventListener("click", function(){
   } else { prompt("Copy this link:", url); }
 });
 
-clock(); setInterval(clock, 1000);
+perSecond(); setInterval(perSecond, 1000);
 tick(); setInterval(tick, POLL_MS);
 })();
 </script>

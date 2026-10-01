@@ -19,6 +19,10 @@
  *
  * Public LIVE dashboard (no login needed): <your-exec-url>?view=dashboard
  * Live JSON feed used by the dashboard: <your-exec-url>?action=publicRows
+ *   (cached 30s via CacheService so 10s dashboard polling stays in quota)
+ * Durable video hosting (secret action, POST JSON): action=upload_video with
+ *   {name, mime, data(base64)} -> permanent Drive link (file-host links die
+ *   in ~2 days; Drive links never expire). Needs Drive scope on re-deploy.
  *
  * After (re)deploying, run the "setup_sheet" action once via the bridge —
  * it writes headers, adds dropdowns + input limits, and applies the premium
@@ -49,6 +53,7 @@ var COLUMNS = [
 ];
 
 function doGet(e) {
+  if (!e) return _json({ ok: true, usage: "use ?view=dashboard or ?action=publicRows" });
   var params = (e && e.parameter) || {};
   // Public LIVE dashboard — no secret needed (read-only UI).
   // Anyone with the link can watch the automation: <exec-url>?view=dashboard
@@ -60,7 +65,7 @@ function doGet(e) {
   // Public read-only rows feed for the dashboard — no secret needed.
   // (Titles/descriptions are intentionally public on this endpoint.)
   if (params.action === "publicRows") {
-    return _json({ ok: true, rows: _getRows(), generatedAt: new Date().toISOString() });
+    return _json(_publicRowsCached());
   }
   var body = {
     action: params.action,
@@ -101,6 +106,8 @@ function _handle(body) {
       case "setup_sheet":
         _setupSheet();
         return _json({ ok: true, setup: "headers + dropdowns + limits + premium styling applied" });
+      case "upload_video":
+        return _json(_uploadVideo(body));
       default:
         return _json({ error: "Unknown action: " + body.action }, 400);
     }
@@ -135,9 +142,67 @@ function _updateRow(rowNumber, values) {
   for (var colName in values) {
     var colIndex = COLUMNS.indexOf(colName);
     if (colIndex === -1) throw new Error("Unknown column: " + colName);
-    sheet.getRange(rowNumber, colIndex + 1).setValue(values[colName]);
+    var v = values[colName];
+    if (colName === "Progress") v = _normalizeProgress(v);
+    sheet.getRange(rowNumber, colIndex + 1).setValue(v);
   }
   SpreadsheetApp.flush();
+  _bustRowsCache();
+}
+
+function _normalizeProgress(v) {
+  // Keep the Sheet UI pretty: "1" -> "100%", 0.05 -> "5%", "5%" stays as-is.
+  if (v === null || v === undefined || v === "") return v;
+  var s = String(v).trim();
+  if (/%$/.test(s)) return s;
+  var n = Number(s);
+  if (isNaN(n)) return v;
+  if (n > 0 && n <= 1) n = Math.round(n * 100);
+  return Math.round(n) + "%";
+}
+
+// --- publicRows cache: the dashboard polls every 10s, so cache the sheet
+// read for 30s to stay well inside Apps Script quotas. Busted on writes.
+var _ROWS_CACHE_TTL = 30;
+function _publicRowsCached() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get("publicRows");
+  if (hit) {
+    var parsed = JSON.parse(hit);
+    parsed.cached = true;
+    return parsed;
+  }
+  var payload = { ok: true, rows: _getRows(), generatedAt: new Date().toISOString() };
+  try { cache.put("publicRows", JSON.stringify(payload), _ROWS_CACHE_TTL); } catch (err) {}
+  return payload;
+}
+function _bustRowsCache() {
+  try { CacheService.getScriptCache().remove("publicRows"); } catch (err) {}
+}
+
+// --- durable video hosting: file-host links expire in ~2 days, but the
+// sheet/dashboard need a link that NEVER dies. This stores the final video
+// in the owner's own Google Drive ("Social Content Automation — Videos")
+// with anyone-with-link view access and returns a permanent direct URL.
+function _uploadVideo(body) {
+  if (!body.name || !body.data) throw new Error("upload_video needs name + data (base64)");
+  var blob = Utilities.newBlob(
+      Utilities.base64Decode(body.data), body.mime || "video/mp4", body.name);
+  var file = _videoFolder().createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  var id = file.getId();
+  return {
+    ok: true,
+    fileId: id,
+    url: "https://drive.google.com/uc?export=download&id=" + id,
+    previewUrl: file.getUrl()
+  };
+}
+function _videoFolder() {
+  var name = "Social Content Automation — Videos";
+  var it = DriveApp.getFoldersByName(name);
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder(name);
 }
 
 // ---------------------------------------------------------------------------

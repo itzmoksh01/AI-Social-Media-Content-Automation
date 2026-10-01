@@ -89,6 +89,11 @@ function doPost(e) {
   } catch (err) {
     return _json({ error: "Invalid JSON body" }, 400);
   }
+  // The shared secret travels as a URL query param (vault surrogate);
+  // merge it into the body so _handle can verify it for POST actions too.
+  if (!body.secret && e.parameter && e.parameter.secret) {
+    body.secret = e.parameter.secret;
+  }
   return _handle(body);
 }
 
